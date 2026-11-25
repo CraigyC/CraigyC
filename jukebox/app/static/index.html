@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14111f">
+<title>Party Jukebox</title>
+<style>
+  :root {
+    --bg: #14111f; --panel: #1f1a30; --panel2: #2a2340; --text: #f3f0ff; --muted: #a39cc0;
+    --accent: #ff4fa3; --accent2: #7c5cff; --ok: #3ddc97; --warn: #ffb547; --bad: #ff5c6c;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { padding: 0 16px 80px; max-width: 760px; margin: 0 auto; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; border-radius: 10px; padding: 8px 12px; background: var(--panel2); }
+  button:hover { filter: brightness(1.15); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); font-weight: 600; }
+  button.ghost { background: transparent; color: var(--muted); }
+  button.icon { padding: 6px 9px; min-width: 34px; }
+  input[type=text], input[type=password], input[type=search] {
+    width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #3a3256; background: var(--panel);
+  }
+  input:focus { outline: 2px solid var(--accent2); border-color: transparent; }
+  h1 { font-size: 1.4rem; margin: 0; }
+  h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 28px 0 10px; }
+  .hidden { display: none !important; }
+  .muted { color: var(--muted); }
+  .small { font-size: .85rem; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0 6px; }
+  .logo { font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .card { background: var(--panel); border-radius: var(--radius); padding: 16px; }
+
+  /* login */
+  #login { max-width: 380px; margin: 12vh auto 0; display: grid; gap: 12px; }
+  #login h1 { font-size: 2rem; text-align: center; }
+
+  /* now playing */
+  .np { display: flex; gap: 14px; align-items: center; }
+  .art { width: 64px; height: 64px; border-radius: 10px; flex: none; object-fit: cover;
+    background: linear-gradient(135deg, var(--accent2), var(--accent)); display: grid; place-items: center; font-size: 1.6rem; }
+  .art.sm { width: 42px; height: 42px; font-size: 1.1rem; border-radius: 8px; }
+  .np .title { font-weight: 700; font-size: 1.1rem; }
+  .bar { height: 5px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-top: 12px; }
+  .bar > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 1s linear; }
+  .times { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); margin-top: 4px; }
+  .controls { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .controls input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
+
+  /* stats */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .stat { background: var(--panel); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 1.25rem; }
+  .stat span { font-size: .75rem; color: var(--muted); }
+
+  /* search */
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tabs button { flex: 1; }
+  .tabs button.on { background: var(--accent2); }
+  .searchrow { display: flex; gap: 8px; }
+
+  /* lists */
+  ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  ul.list li { display: flex; gap: 10px; align-items: center; background: var(--panel); border-radius: 12px; padding: 8px 10px; }
+  ul.list li.mine { box-shadow: inset 3px 0 0 var(--accent); }
+  ul.list li.next { background: linear-gradient(90deg, #3a2350, var(--panel)); }
+  .idx { width: 22px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+  .meta { flex: 1; min-width: 0; }
+  .meta .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta .a { font-size: .85rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acts { display: flex; gap: 4px; flex: none; }
+  .badge { display: inline-block; font-size: .7rem; padding: 1px 7px; border-radius: 99px; background: var(--panel2); color: var(--muted); margin-left: 4px; vertical-align: middle; }
+  .badge.hot { background: var(--accent); color: white; }
+  .src { font-size: .7rem; opacity: .7; }
+
+  /* admin */
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  td, th { padding: 6px 4px; text-align: left; border-bottom: 1px solid var(--panel2); }
+  th { color: var(--muted); font-weight: 500; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .err { background: #3b1d28; color: #ffb3bd; border-radius: 10px; padding: 8px 12px; margin-top: 10px; font-size: .9rem; }
+
+  #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%) translateY(150%);
+    background: var(--panel2); padding: 12px 18px; border-radius: 12px; box-shadow: 0 8px 30px #0008;
+    transition: transform .25s; max-width: calc(100% - 32px); z-index: 10; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.good { background: #1f4d3b; } #toast.bad { background: #5a1f2b; }
+  details summary { cursor: pointer; color: var(--muted); margin: 8px 0; }
+  .help { font-size: .85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<section id="login" class="hidden">
+  <h1 class="logo">Party Jukebox</h1>
+  <p class="muted" style="text-align:center;margin:0">Pick a name and add some tunes.</p>
+  <input id="l-name" type="text" placeholder="Your name" maxlength="30" autocomplete="nickname">
+  <input id="l-pin" type="text" placeholder="Party PIN" inputmode="numeric" class="hidden">
+  <details id="l-admin-box"><summary>I'm the host</summary>
+    <input id="l-admin" type="password" placeholder="Admin password">
+  </details>
+  <button class="primary" id="l-go">Join the party</button>
+  <div id="l-err" class="err hidden"></div>
+</section>
+
+<!-- ============ APP ============ -->
+<main id="app" class="hidden">
+  <header>
+    <h1 class="logo">Party Jukebox</h1>
+    <div class="row"><span id="who" class="muted small"></span><button class="ghost small" id="logout">Log out</button></div>
+  </header>
+
+  <h2>Now playing</h2>
+  <div class="card">
+    <div class="np">
+      <div id="np-art"><div class="art">♪</div></div>
+      <div class="meta">
+        <div class="title t" id="np-title">Nothing playing</div>
+        <div class="a" id="np-artist">Add a track to get things going</div>
+        <div class="a small" id="np-by"></div>
+      </div>
+    </div>
+    <div class="bar"><div id="np-bar"></div></div>
+    <div class="times"><span id="np-pos">0:00</span><span id="np-dur">0:00</span></div>
+    <div class="controls admin-only hidden">
+      <button id="btn-play">⏸ Pause</button>
+      <button id="btn-skip">⏭ Skip</button>
+      <span class="muted small">🔊</span><input type="range" id="vol" min="0" max="100" value="40">
+    </div>
+    <div id="np-error" class="err hidden"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="s-added">0</b><span>tracks you've added</span></div>
+    <div class="stat"><b id="s-imp">100%</b><span>importance of your next track</span></div>
+    <div class="stat"><b id="s-chance">100%</b><span>chance your next "play next" wins</span></div>
+  </div>
+
+  <h2>Add a track</h2>
+  <div class="tabs" id="tabs">
+    <button data-src="spotify" class="on">Spotify</button>
+    <button data-src="local">Local library</button>
+  </div>
+  <form class="searchrow" id="search-form">
+    <input type="search" id="q" placeholder="Search songs, artists, albums…" autocomplete="off">
+    <button class="primary">Search</button>
+  </form>
+  <p id="search-note" class="help hidden"></p>
+  <ul class="list" id="results" style="margin-top:10px"></ul>
+
+  <h2>Up next <span id="q-count" class="badge"></span></h2>
+  <ul class="list" id="queue"></ul>
+  <p id="q-empty" class="muted small hidden">The queue is empty.</p>
+
+  <h2>Recently played</h2>
+  <ul class="list" id="history"></ul>
+
+  <!-- ============ ADMIN ============ -->
+  <section class="admin-only hidden">
+    <h2>Host controls</h2>
+    <div class="card" style="display:grid;gap:14px">
+      <div>
+        <b>Spotify</b> <span id="sp-status" class="badge"></span>
+        <div class="row" style="margin-top:8px">
+          <a href="/spotify/login" id="sp-connect"><button>Connect Spotify</button></a>
+          <button id="sp-disconnect" class="hidden">Disconnect</button>
+          <button id="sp-devices">Show Spotify devices</button>
+        </div>
+        <p class="help" id="sp-devlist"></p>
+      </div>
+      <div class="row">
+        <button id="rescan">Rescan local library</button>
+        <button id="clear">Clear queue</button>
+      </div>
+      <div>
+        <b>Guests</b>
+        <table><thead><tr><th>Name</th><th>Added</th><th>Next imp.</th><th>Next reqs</th><th></th></tr></thead>
+          <tbody id="users"></tbody></table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const state = { me: null, src: "spotify", data: null, tick: null, lastFetch: 0 };
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {
+    method: opts.method || "GET",
+    headers: opts.body ? { "Content-Type": "application/json" } : {},
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    credentials: "same-origin",
+  });
+  let data = null;
+  try { data = await res.json(); } catch {}
+  if (!res.ok) {
+    const msg = (data && (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail))) || res.statusText;
+    const e = new Error(msg); e.status = res.status; throw e;
+  }
+  return data;
+}
+
+let toastTimer;
+function toast(msg, kind = "") {
+  const t = $("#toast");
+  t.textContent = msg; t.className = "show " + kind;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.className = ""), 3500);
+}
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const fmt = (ms) => { ms = Math.max(0, ms | 0); const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+const join = (...parts) => parts.filter(Boolean).join(" · ");
+const pct = (x) => `${Math.round(x * 100)}%`;
+const art = (t, cls = "") => t.art_url ? `<img class="art ${cls}" src="${esc(t.art_url)}" alt="">` : `<div class="art ${cls}">${t.source === "local" ? "💿" : "♪"}</div>`;
+
+/* ---------------- login ---------------- */
+function showLogin(err) {
+  $("#app").classList.add("hidden"); $("#login").classList.remove("hidden");
+  if (err) { $("#l-err").textContent = err; $("#l-err").classList.remove("hidden"); }
+  $("#l-name").value = localStorage.getItem("jb-name") || "";
+}
+$("#l-go").onclick = async () => {
+  $("#l-err").classList.add("hidden");
+  const name = $("#l-name").value.trim();
+  try {
+    const me = await api("/api/login", { method: "POST", body: { name, pin: $("#l-pin").value, admin_password: $("#l-admin").value } });
+    try { localStorage.setItem("jb-name", name); } catch {}
+    $("#l-admin").value = "";
+    start(me);
+  } catch (e) {
+    if (/PIN/.test(e.message)) $("#l-pin").classList.remove("hidden");
+    showLogin(e.message);
+  }
+};
+["#l-name", "#l-pin", "#l-admin"].forEach((s) => $(s).addEventListener("keydown", (e) => e.key === "Enter" && $("#l-go").click()));
+$("#logout").onclick = async () => { await api("/api/logout", { method: "POST" }); clearInterval(state.tick); showLogin(); };
+
+/* ---------------- main loop ---------------- */
+function start(me) {
+  state.me = me;
+  $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+  document.querySelectorAll(".admin-only").forEach((el) => el.classList.toggle("hidden", !me.is_admin));
+  refresh(); if (me.is_admin) loadUsers();
+  clearInterval(state.tick); state.tick = setInterval(refresh, 3000);
+  if (!state.anim) state.anim = setInterval(animateProgress, 1000);
+  if (location.search.includes("spotify=connected")) { toast("Spotify connected 🎉", "good"); history.replaceState(null, "", "/"); }
+}
+
+async function refresh() {
+  try {
+    const d = await api("/api/state");
+    state.data = d; state.lastFetch = Date.now(); state.me = d.me;
+    render(d);
+  } catch (e) {
+    if (e.status === 401 || e.status === 403) { clearInterval(state.tick); showLogin(e.status === 403 ? e.message : ""); }
+  }
+}
+
+function animateProgress() {
+  const np = state.data && state.data.now_playing;
+  if (!np) return;
+  const extra = state.data.paused ? 0 : Date.now() - state.lastFetch;
+  const pos = Math.min(np.duration_ms || 0, (np.position_ms || 0) + extra);
+  $("#np-pos").textContent = fmt(pos);
+  $("#np-bar").style.width = np.duration_ms ? `${(pos / np.duration_ms) * 100}%` : "0";
+}
+
+function render(d) {
+  const me = d.me;
+  $("#who").textContent = me.name + (me.is_admin ? " (host)" : "");
+  $("#s-added").textContent = me.tracks_added;
+  $("#s-imp").textContent = pct(me.next_track_importance);
+  $("#s-chance").textContent = pct(me.next_request_chance);
+
+  // now playing
+  const np = d.now_playing;
+  const artHtml = np ? art(np) : '<div class="art">♪</div>';
+  if (state.artHtml !== artHtml) { state.artHtml = artHtml; $("#np-art").innerHTML = artHtml; }
+  $("#np-title").textContent = np ? np.title : "Nothing playing";
+  $("#np-artist").textContent = np ? np.artist : "Add a track to get things going";
+  $("#np-by").textContent = np ? `added by ${np.added_by_name || "someone"}` : "";
+  $("#np-dur").textContent = fmt(np ? np.duration_ms : 0);
+  if (!np) { $("#np-bar").style.width = "0"; $("#np-pos").textContent = "0:00"; }
+  animateProgress();
+  $("#btn-play").textContent = d.paused ? "▶ Play" : "⏸ Pause";
+  $("#np-error").textContent = d.error || "";
+  $("#np-error").classList.toggle("hidden", !d.error);
+
+  // sources
+  const note = $("#search-note");
+  if (state.src === "spotify" && !d.sources.spotify) {
+    note.textContent = d.spotify_configured ? "Spotify isn't connected yet - ask the host." : "Spotify isn't set up on this jukebox. Try the local library.";
+    note.classList.remove("hidden");
+  } else if (state.src === "local" && !d.sources.local) {
+    note.textContent = "The local library is empty."; note.classList.remove("hidden");
+  } else note.classList.add("hidden");
+  $("#sp-status").textContent = d.sources.spotify ? "connected" : d.spotify_configured ? "not connected" : "not configured";
+  $("#sp-connect").classList.toggle("hidden", d.sources.spotify || !d.spotify_configured);
+  $("#sp-disconnect").classList.toggle("hidden", !d.sources.spotify);
+
+  // queue
+  $("#q-count").textContent = d.queue.length || "";
+  $("#q-empty").classList.toggle("hidden", d.queue.length > 0);
+  $("#queue").innerHTML = d.queue.map((t, i) => {
+    const mine = t.added_by === me.id;
+    const acts = [];
+    if (mine && !t.play_next && !me.is_admin) acts.push(`<button class="icon" title="Request to play next (${pct(me.next_request_chance)} chance)" data-act="req" data-id="${t.id}">⏫</button>`);
+    if (me.is_admin) {
+      acts.push(`<button class="icon" title="Play next" data-act="top" data-id="${t.id}">⤒</button>`);
+      acts.push(`<button class="icon" title="Move up" data-act="up" data-id="${t.id}" data-i="${i}" ${i === 0 ? "disabled" : ""}>↑</button>`);
+      acts.push(`<button class="icon" title="Move down" data-act="down" data-id="${t.id}" data-i="${i}" ${i === d.queue.length - 1 ? "disabled" : ""}>↓</button>`);
+      acts.push(`<button class="icon" title="Remove" data-act="del" data-id="${t.id}">✕</button>`);
+    }
+    return `<li class="${mine ? "mine" : ""} ${t.play_next ? "next" : ""}">
+      <span class="idx">${i + 1}</span>${art(t, "sm")}
+      <div class="meta"><div class="t">${esc(t.title)}${t.play_next ? '<span class="badge hot">requested</span>' : ""}</div>
+      <div class="a">${join(esc(t.artist), `<span class="src">${t.source === "local" ? "💿" : "Spotify"}</span>`, esc(t.added_by_name || "someone"))}
+      <span class="badge" title="importance">${pct(t.importance)}</span></div></div>
+      <div class="acts">${acts.join("")}</div></li>`;
+  }).join("");
+
+  $("#history").innerHTML = d.history.map((t) => `<li>${art(t, "sm")}
+    <div class="meta"><div class="t">${esc(t.title)}${t.status !== "played" ? `<span class="badge">${t.status}</span>` : ""}</div>
+    <div class="a">${join(esc(t.artist), esc(t.added_by_name || "someone"))}</div></div></li>`).join("") || '<p class="muted small">Nothing yet.</p>';
+}
+
+/* ---------------- search & add ---------------- */
+$("#tabs").onclick = (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.src = b.dataset.src;
+  document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
+  $("#results").innerHTML = "";
+  if (state.data) render(state.data);
+  if (state.src === "local" || $("#q").value.trim()) doSearch();
+};
+$("#search-form").onsubmit = (e) => { e.preventDefault(); doSearch(); };
+
+async function doSearch() {
+  const q = $("#q").value.trim();
+  $("#results").innerHTML = '<p class="muted small">Searching…</p>';
+  try {
+    const rows = await api(`/api/search?source=${state.src}&q=${encodeURIComponent(q)}`);
+    state.results = rows;
+    const chance = state.me ? pct(state.me.next_request_chance) : "";
+    $("#results").innerHTML = rows.map((t, i) => `<li>${art(t, "sm")}
+      <div class="meta"><div class="t">${esc(t.title)}</div><div class="a">${join(esc(t.artist), esc(t.album), t.duration_ms ? fmt(t.duration_ms) : "")}</div></div>
+      <div class="acts"><button class="icon" title="Add and ask to play next (${chance} chance)" data-add="${i}" data-next="1">⏫</button>
+      <button class="primary icon" title="Add to queue" data-add="${i}">＋</button></div></li>`).join("")
+      || '<p class="muted small">No results.</p>';
+  } catch (e) { $("#results").innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+}
+
+$("#results").onclick = async (e) => {
+  const b = e.target.closest("button[data-add]"); if (!b) return;
+  const t = state.results[+b.dataset.add];
+  b.disabled = true;
+  try {
+    const r = await api("/api/queue", { method: "POST", body: { source: t.source, source_id: t.source_id, play_next: !!b.dataset.next } });
+    const where = r.position != null ? ` at #${r.position + 1}` : "";
+    if (r.requested) toast(r.granted ? `🎉 "${t.title}" plays next!` : `Added${where} - play-next request didn't win (${pct(r.chance)} chance)`, r.granted ? "good" : "");
+    else toast(`Added "${t.title}"${where}`, "good");
+    b.closest("li").style.opacity = .4;
+    refresh();
+  } catch (err) { toast(err.message, "bad"); b.disabled = false; }
+};
+
+/* ---------------- queue actions ---------------- */
+$("#queue").onclick = async (e) => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const id = b.dataset.id, i = +b.dataset.i;
+  try {
+    switch (b.dataset.act) {
+      case "req": {
+        const r = await api(`/api/queue/${id}/request-next`, { method: "POST" });
+        toast(r.granted ? "🎉 Your track plays next!" : `No luck this time (${pct(r.chance)} chance)`, r.granted ? "good" : "");
+        break;
+      }
+      case "top": await api(`/api/queue/${id}/move`, { method: "POST", body: { index: 0 } }); break;
+      case "up": await api(`/api/queue/${id}/move`, { method: "POST", body: { index: i - 1 } }); break;
+      case "down": await api(`/api/queue/${id}/move`, { method: "POST", body: { index: i + 1 } }); break;
+      case "del": await api(`/api/queue/${id}`, { method: "DELETE" }); break;
+    }
+    refresh();
+  } catch (err) { toast(err.message, "bad"); }
+};
+
+/* ---------------- admin ---------------- */
+$("#btn-play").onclick = async () => {
+  try { await api(`/api/player/${state.data && state.data.paused ? "resume" : "pause"}`, { method: "POST" }); refresh(); }
+  catch (e) { toast(e.message, "bad"); }
+};
+$("#btn-skip").onclick = async () => { try { await api("/api/player/skip", { method: "POST" }); refresh(); } catch (e) { toast(e.message, "bad"); } };
+let volTimer;
+$("#vol").oninput = (e) => {
+  clearTimeout(volTimer);
+  volTimer = setTimeout(() => api("/api/volume", { method: "POST", body: { volume: +e.target.value } }).catch((x) => toast(x.message, "bad")), 250);
+};
+$("#rescan").onclick = async () => { try { const r = await api("/api/admin/rescan", { method: "POST" }); toast(`Found ${r.tracks} local tracks`, "good"); refresh(); } catch (e) { toast(e.message, "bad"); } };
+$("#clear").onclick = async () => { if (!confirm("Remove every track from the queue?")) return; await api("/api/queue/clear", { method: "POST" }); refresh(); };
+$("#sp-disconnect").onclick = async () => { await api("/spotify/disconnect", { method: "POST" }); refresh(); };
+$("#sp-devices").onclick = async () => {
+  try {
+    const ds = await api("/api/admin/spotify-devices");
+    $("#sp-devlist").textContent = ds.length ? "Devices: " + ds.map((d) => `${d.name}${d.active ? " (active)" : ""}`).join(", ") + ". Put the WiiM's name in SPOTIFY_DEVICE_NAME."
+      : "No devices visible. Open Spotify on your phone and pick the WiiM once so it shows up.";
+  } catch (e) { $("#sp-devlist").textContent = e.message; }
+};
+
+async function loadUsers() {
+  const users = await api("/api/admin/users");
+  $("#users").innerHTML = users.map((u) => `<tr>
+    <td>${esc(u.name)}${u.is_admin ? ' <span class="badge">host</span>' : ""}${u.banned ? ' <span class="badge">banned</span>' : ""}</td>
+    <td>${u.tracks_added}</td><td>${pct(u.next_track_importance)}</td><td>${u.next_granted}/${u.next_requests}</td>
+    <td class="acts">
+      <button class="icon" title="Reset counts (full importance again)" data-u="${u.id}" data-op="reset">↺</button>
+      ${u.id === state.me.id ? "" : `<button class="icon" title="${u.banned ? "Unban" : "Ban"}" data-u="${u.id}" data-op="${u.banned ? "unban" : "ban"}">${u.banned ? "✓" : "⛔"}</button>
+      <button class="icon" title="Forget this guest (frees their name)" data-u="${u.id}" data-op="forget">🗑</button>`}
+    </td></tr>`).join("");
+}
+$("#users").onclick = async (e) => {
+  const b = e.target.closest("button[data-op]"); if (!b) return;
+  const id = b.dataset.u, op = b.dataset.op;
+  try {
+    if (op === "forget") { if (!confirm("Forget this guest? Their name becomes free to use again.")) return; await api(`/api/admin/users/${id}`, { method: "DELETE" }); }
+    else await api(`/api/admin/users/${id}`, { method: "PATCH", body: op === "reset" ? { reset_counts: true } : { banned: op === "ban" } });
+    loadUsers(); refresh();
+  } catch (err) { toast(err.message, "bad"); }
+};
+setInterval(() => state.me && state.me.is_admin && !$("#app").classList.contains("hidden") && loadUsers(), 15000);
+
+/* ---------------- boot ---------------- */
+api("/api/me").then(start).catch(() => showLogin());
+</script>
+</body>
+</html>

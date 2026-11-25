@@ -1,0 +1,12 @@
+services:
+  jukebox:
+    build: .
+    container_name: party-jukebox
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+      # point this at your music folder (read-only is fine)
+      - ./music:/music:ro

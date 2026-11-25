@@ -1,0 +1,6 @@
+.env
+data/
+music/
+__pycache__/
+.pytest_cache/
+*.pyc
